@@ -105,13 +105,66 @@ class EightBitDemoDevice:
     for i in range(0,len(self.my_data)):
       print("Register 0x{0: <4}: {1: <7} = 0b{2}".format(BitArray(int=i, length=16).hex,self.my_data[i][0],self.my_data[i][3].bin))
       
-
+class DefectDeviceA:  
+  def loadData(self):
+    data = [[42, 0x0001, # integer as a name
+        [
+        ["bit 0", 0, 1],
+        ["bits 1-7", 1, 7]
+        ],
+        BitArray('0b00000000')
+      ]]
+    return data 
+  def storeData(self, data):
+    print ("")
+    
+class DefectDeviceB:  
+  def loadData(self):
+    data = [["defect", 66666, # wrong address 
+        [
+        ["bit 0", 0, 1],
+        ["bits 1-7", 1, 7]
+        ],
+        BitArray('0b00000000')
+      ]]
+    return data
+    
+  def storeData(self, data):
+    print ("")    
+    
+class DefectDeviceC:  
+  def loadData(self):
+    data = [["defect", 0x0001, 
+        [
+        ["bit 0", 0, 1],
+        ["bits 1-7", 1, 22] # wrong bitfield width
+        ],
+        BitArray('0b00000000')
+      ]]
+    return data
+    
+  def storeData(self, data):
+    print ("")        
+  
+class DefectDeviceD:  
+  def loadData(self):
+    data = [["defect", 0x0001, 
+        [
+        ["bit 0", 0, 1],
+        ["bits 1-7", 1, 7]
+        ],
+        "DEFECT"  # not a BitArray
+      ]]
+    return data
+    
+  def storeData(self, data):
+    print ("")          
+  
 class ExerciseTest(unittest.TestCase):
   """ Unit test for Exercise GUI """
   def setUp(self):
     """ Create the GUI """
     self.form  = ExerciseWindow()
- 
  
   def test_defaults(self):
     """ Test GUI """
@@ -119,6 +172,12 @@ class ExerciseTest(unittest.TestCase):
     self.model = MyRegisterModel(demodevice)
     self.form.setModel(self.model)
     self.assertEqual(self.form.testMe(), True)
-    
+
+  def test_defectA(self):
+    """ Test Defect devices """
+    for demodevice in {DefectDeviceA(),DefectDeviceB(),DefectDeviceC(),DefectDeviceD()}:
+      self.model = MyRegisterModel(demodevice)
+      self.assertRaises(TypeError, self.form.testMe, self.model)
+        
 if __name__ == "__main__":
   unittest.main()

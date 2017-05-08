@@ -127,6 +127,11 @@ class MyRegisterModel(QAbstractTableModel):
   def getRegisterValue(self,i):
     """Get function """    
     """ returns the 8bit value in a BitString object """
+    dat = self.data(self.createIndex(i,3),Qt.DisplayRole)
+    if isinstance(dat, BitArray) == False:
+      raise RuntimeError("Error: data is not a BitArray")
+    if len(dat) != 8:
+      raise RuntimeError("Error: data is not a BitArray of length 8")
     return self.data(self.createIndex(i,3),Qt.DisplayRole)
 
   def getRegisterSubValue(self,i,pos,width):
@@ -155,8 +160,7 @@ class MyRegisterModel(QAbstractTableModel):
     dataValue = self.getRegisterValue(i)
     
     if val < 0 or val > pow(2,width)-1:
-      print("ERROR: val = {0} conflicts with bit width {1}".format(val,width))
-      # todo raise error
+      raise RuntimeError("ERROR: val = {0} conflicts with bit width {1}".format(val,width))
     
     subValue = BitArray(uint=val, length=width)
     dataValue[pos:pos+width] = subValue
@@ -174,8 +178,16 @@ class MyRegisterModel(QAbstractTableModel):
 
   def setData(self, index, value):
     """ Data access routine in QAbstractTableModel class """  
-    # TODO validate data before storing
-    #if isinstance(value, str) == True:...
+    if index.column() == 0:
+      if isinstance(value, string) == False:
+        raise RuntimeError("ERROR: Register name must be of type string")
+    if index.column() == 1:
+      if isinstance(value, int) == False:
+        raise RuntimeError("ERROR: Register address must be of type int")
+    if index.column() == 3:
+      if isinstance(value, BitArray) == False:
+        raise RuntimeError("ERROR: Register value must be of type BitArray")
+
     self.__devicedata[index.row()][index.column()] = value
     return True
   
@@ -211,6 +223,11 @@ class BitfieldWidget(QWidget):
     self.__pos   = pos
     self.__width = bitFieldWidth
 
+    if self.__pos < 0 or self.__pos > 7:
+      raise RuntimeError("Error: bitfield position must between 0 and 7")
+    if self.__pos + self.__width > 8:
+      raise RuntimeError("Error: inconsisten bitfield width and positiion")
+
     if bitFieldWidth == 1:
       self.__act = QPushButton(self)
       self.__act.setCheckable(True)
@@ -228,6 +245,8 @@ class BitfieldWidget(QWidget):
       self.__act.setOrientation(Qt.Horizontal)  
       self.__act.setTickPosition(QSlider.TicksBelow)  
       self.__act.valueChanged.connect(self.slotBitfieldSliderChange)
+    else:
+      raise RuntimeError("Error: bitfield width cannot exceed size 8")
     return self.__act
 
   def slotBitfieldButtonChange(self):
@@ -262,42 +281,44 @@ class BitfieldWidget(QWidget):
       self.__act.setCurrentIndex(subValue)
     elif self.__width < 9:
       self.__act.setValue(subValue)
+    else:
+      raise RuntimeError("Error: bitfield width cannot exceed size 8")
       
   def testMe(self):
     subValue = self.__model.getRegisterSubValue(self.__reg,self.__pos,self.__width)
     
     # check type of GUI element
     if (self.__width == 1) and (isinstance(self.__act,QPushButton) == False):
-      print("Error: bitfield width == 1 but GUI element is not a push button")
+      raise RuntimeError("Error: bitfield width == 1 but GUI element is not a push button")
       return False
     if (self.__width > 1) and (self.__width < 4) and (isinstance(self.__act,QComboBox) == False):
-      print("Error: bitfield width between 2 and 3 but GUI element is not a combo box")
+      raise RuntimeError("Error: bitfield width between 2 and 3 but GUI element is not a combo box")
       return False
     if (self.__width > 3) and (self.__width < 9) and (isinstance(self.__act,QSlider) == False):
-      print("Error: bitfield width between 4 and 8 but GUI element is not a slider")
+      raise RuntimeError("Error: bitfield width between 4 and 8 but GUI element is not a slider")
       return False
     if (self.__width < 1) or (self.__width > 8):
-      print("Error: invalid bitfield width: {0}".format(self.__width))
+      raise RuntimeError("Error: invalid bitfield width: {0}".format(self.__width))
       return False
     if (isinstance(self.__act,QSlider) == False) and (isinstance(self.__act,QComboBox) == False) and (isinstance(self.__act,QPushButton) == False) :
-      print("Error: invalid GUI element")
+      raise RuntimeError("Error: invalid GUI element")
       return False
 
     #check whether GUI element contains right data
     if isinstance(self.__act,QSlider) == True:
       if(subValue != self.__act.value()):
-        print("Error: slider value does not correspond to sub-value from model")
+        raise RuntimeError("Error: slider value does not correspond to sub-value from model")
         return False
     elif isinstance(self.__act,QComboBox) == True:
       if(subValue != self.__act.currentIndex()):
-        print("Error: combo box value does not correspond to sub-value from model")
+        raise RuntimeError("Error: combo box value does not correspond to sub-value from model")
         return False      
     elif isinstance(self.__act,QPushButton) == True:
       if subValue == 1 and self.__act.isChecked() == False:
-        print("Error: button value does not correspond to sub-value from model")
+        raise RuntimeError("Error: button value does not correspond to sub-value from model")
         return False
       elif subValue == 0 and self.__act.isChecked() == True:
-        print("Error: button value does not correspond to sub-value from model")
+        raise RuntimeError("Error: button value does not correspond to sub-value from model")
         return False    
 
 	# set GUI element to random number and modify value (checked in ExerciseWindow.testMe)
@@ -318,7 +339,7 @@ class BitfieldWidget(QWidget):
         
     subValueNew = self.__model.getRegisterSubValue(self.__reg,self.__pos,self.__width)        
     if rndnr != subValueNew:
-      print("Error: failed to store new subvalue")
+      raise RuntimeError("Error: failed to store new subvalue")
       return False
                 
 #####################################################################
@@ -387,12 +408,10 @@ class ExerciseWindow(QWidget):
     self.__labelRegisterValue.valueChanged.connect(self.slotRegisterValueChanged)
     layoutRegisterValue.addWidget(self.__labelRegisterValue)
     layoutRegister.addLayout(layoutRegisterValue)
-    #layoutRegister.addWidget(self.__labelRegisterValue)
-
-    #print("Number of bitfields for register " + str(i) + ": " + str(self.__model.getNumberOfBitfields(i)))
     
     self.__actorBitfield = []
     cnt = 0
+    sumBitfieldWidths = 0
     for bi in self.__model.getBitfields(i):
       labelBitfieldName = QLabel()
       labelBitfieldName.setText(bi[0])
@@ -410,7 +429,13 @@ class ExerciseWindow(QWidget):
       self.__actorBitfield.append(bitFieldWidget)
        
       cnt = cnt + 1 # index for bitfield actor objects
-        
+      
+      # plausibility check
+      sumBitfieldWidths = sumBitfieldWidths + bitFieldWidth
+      
+    if sumBitfieldWidths != 8:
+      raise RuntimeError("Error: sum of all bitfield widths should be 8 but is {0}".format(sumBitfieldWidths))  
+
     self.__groupRegister = QGroupBox(self.tr("Register"))    
     self.__groupRegister.setLayout(layoutRegister)
     self.layout.addWidget(self.__groupRegister)
@@ -441,7 +466,7 @@ class ExerciseWindow(QWidget):
     """ Given a set of bitfields test whether GUI represents all values correctly """
     
     if self.__model.rowCount(self) != self.__cmbSelectRegister.count():
-      print("Number of registers in GUI does not match number of registers in model")
+      raise RuntimeError("Error: Number of registers in GUI does not match number of registers in model")
       return False
       
     # loop over all registers
@@ -450,16 +475,16 @@ class ExerciseWindow(QWidget):
       
       name = "Register: " + self.__model.getRegisterName(r)
       if name != self.__labelRegisterName.text():
-        print("Incorrect register name in label")
+        raise RuntimeError("Error: Incorrect register name in label")
         return False
         
       address = "Address: 0x" + BitArray(int=self.__model.getRegisterAddress(r), length=16).hex
       if address != self.__labelRegisterAddress.text():
-        print("Incorrect register address in label")
+        raise RuntimeError("Error: Incorrect register address in label")
         return False
         
       if self.__model.getNumberOfBitfields(r) != len(self.__actorBitfield):
-        print("Inconsistent number of bitfields")
+        raise RuntimeError("Error: Inconsistent number of bitfields")
         return False
     
       # loop through all values
@@ -470,19 +495,19 @@ class ExerciseWindow(QWidget):
         
         # check whether value is correctly stored in model
         if self.__model.getRegisterValue(r).uint != v:
-          print("Error: could not set new register value")
+          raise RuntimeError("Error: could not set new register value")
           return False
         
         # check all bitfield GUI elements for correct values
         for b in range(0,self.__model.getNumberOfBitfields(r)):
           bSuccess = self.__actorBitfield[b].testMe()
           if bSuccess == False:        
-            print("Error: bitfield tests failed")
+            raise RuntimeError("Error: bitfield tests failed")
             return False
             
           # testMe of bitfield widget should have changed value
           if self.__model.getRegisterValue(r).uint != self.__labelRegisterValue.value():
-            print("Error: register value does not match model data value")
+            raise RuntimeError("Error: register value does not match model data value")
             return False
 
       print("Test register " + str(r) + ": OK")    

@@ -62,7 +62,7 @@ class EightBitDemoDevice:
     """ helper function generates a register entry for a given bitfield array """
     register = []
     register.append("reg {0}".format(regAddress))
-    register.append(BitArray(int=regAddress, length=16).uint)
+    register.append(BitArray(int=regAddress, length=16))
     bitfields = []
     b = 0
     for i in bitfieldWidths:
@@ -107,7 +107,7 @@ class EightBitDemoDevice:
       
 class DefectDeviceA:  
   def loadData(self):
-    data = [[42, 0x0001, # integer as a name
+    data = [[42, BitArray(int = 1, length=16), # integer as a name
         [
         ["bit 0", 0, 1],
         ["bits 1-7", 1, 7]
@@ -134,7 +134,7 @@ class DefectDeviceB:
     
 class DefectDeviceC:  
   def loadData(self):
-    data = [["defect", 0x0001, 
+    data = [["defect", BitArray(int = 1, length=16), 
         [
         ["bit 0", 0, 1],
         ["bits 1-7", 1, 22] # wrong bitfield width
@@ -148,7 +148,7 @@ class DefectDeviceC:
   
 class DefectDeviceD:  
   def loadData(self):
-    data = [["defect", 0x0001, 
+    data = [["defect", BitArray(int = 1, length=16), 
         [
         ["bit 0", 0, 1],
         ["bits 1-7", 1, 7]

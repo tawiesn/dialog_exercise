@@ -20,20 +20,20 @@ from PyQt5.QtWidgets import *
 class HardwareLayerA:
   """ Hardware interface layer A """
   my_data = [
-      ["reg 1", 0x0001, 
+      ["reg 1", BitArray(int = 1, length=16), 
         [
         ["bit 0", 0, 1],
         ["bits 1-7", 1, 7]
         ],
         BitArray('0b00000000')
       ],
-      ["reg 2", 0x0002,
+      ["reg 2", BitArray(int = 2, length=16),
         [
         ["slider",0,8]
         ],
         BitArray('0b00000000')
       ],
-      ["reg 3", 0x0003,
+      ["reg 3", BitArray(int = 3, length=16),
         [
         ["bit 0",0,1],
         ["bit 1-3",1,3],
@@ -56,14 +56,14 @@ class HardwareLayerA:
 class HardwareLayerB:  
   """ Hardware interface layer B """
   my_data = [
-      ["reg 1", 0x0001, 
+      ["reg 1", BitArray(int = 1, length=16), 
         [
         ["bit 0", 0, 1],
         ["bits 1-7", 1, 7]
         ],
         BitArray('0b00000000')
       ],
-      ["reg 2", 0x0002,
+      ["reg 2", BitArray(int = 2, length=16),
         [
         ["slider",0,8]
         ],
@@ -391,7 +391,7 @@ class ExerciseWindow(QWidget):
     layoutRegister.addWidget(self.__labelRegisterName)
 
     self.__labelRegisterAddress = QLabel()
-    self.__labelRegisterAddress.setText("Address: 0x" + BitArray(int=self.__model.getRegisterAddress(i), length=16).hex)
+    self.__labelRegisterAddress.setText("Address: 0x" + self.__model.getRegisterAddress(i).hex)
     self.__labelRegisterAddress.setTextFormat(Qt.PlainText)
     layoutRegister.addWidget(self.__labelRegisterAddress)
 
@@ -478,7 +478,7 @@ class ExerciseWindow(QWidget):
         raise RuntimeError("Error: Incorrect register name in label")
         return False
         
-      address = "Address: 0x" + BitArray(int=self.__model.getRegisterAddress(r), length=16).hex
+      address = "Address: 0x" + self.__model.getRegisterAddress(r).hex
       if address != self.__labelRegisterAddress.text():
         raise RuntimeError("Error: Incorrect register address in label")
         return False
